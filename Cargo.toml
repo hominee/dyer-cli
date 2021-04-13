@@ -1,10 +1,10 @@
 [package]
 name = "dyer-cli"
-version = "0.1.0"
-authors = ["captain"]
+version = "0.1.1"
+authors = ["HomelyGuy"]
 edition = "2018"
 license = "MIT"
-eywords = ["crawler", "spider", "web-crawling", "web-framework", "scrapy"]
+keywords = ["crawler", "spider", "web-crawling", "web-framework", "scrapy"]
 categories = ["network-programming", "web-programming"]
 description = "dyer-cli is a great tool created to guide you use dyer fast and at ease, helps you build a robust crawler, data processor, netwrok program fast and correctly."
 homepage = "https://crates.io/crates/dyer-cli"

@@ -2,6 +2,7 @@
 [Dyer-cli] is a great tool created to guide you use [dyer] fast and at ease, helps you build a robust crawler, data processor, netwrok program fast and correctly.
 
 [Dyer-cli]: https://github.com/HomelyGuy/dyer-cli
+[dyer]: https://github.com/HomelyGuy/dyer
 
 # Installation
 Dyer-cli is built completely by Rust programming language without extra dependencies, So rust must be installed beforehand, to test it with:
