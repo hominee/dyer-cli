@@ -3,6 +3,14 @@ name = "dyer-cli"
 version = "0.1.0"
 authors = ["captain"]
 edition = "2018"
+license = "MIT"
+eywords = ["crawler", "spider", "web-crawling", "web-framework", "scrapy"]
+categories = ["network-programming", "web-programming"]
+description = "dyer-cli is a great tool created to guide you use dyer fast and at ease, helps you build a robust crawler, data processor, netwrok program fast and correctly."
+homepage = "https://crates.io/crates/dyer-cli"
+repository = "https://github.com/HomelyGuy/dyer-cli"
+documentation = "https://docs.rs/dyer_cli"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
