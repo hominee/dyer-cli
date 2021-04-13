@@ -25,7 +25,7 @@
 //! supported, more commands are to go.
 //!
 //! ## dyer-cli new
-//! This command helps you initialize a project whose structure is
+//! This command helps you initialize a project with log level `Info`, other log levels vares from `Error`, `Warn`, `Info`, `Debug`, and `Trace`, and its structure is
 //! ```bash
 //! |___Cargo.toml
 //! |___Readme.md
@@ -56,7 +56,7 @@ mod subcommand;
 mod util;
 
 use subcommand::{SubComNew, /*SubComRun,*/ SubCommand};
-//use util::LogLevel;
+use util::LogLevel;
 
 #[derive(std::fmt::Debug)]
 pub struct Info {
@@ -92,7 +92,16 @@ impl Into<SubCommand> for Info {
         let mut comd: SubCommand = SubCommand::Null;
         if self.sub_command == "new" {
             let name = self.others.pop().expect("project name must be specified.");
-            comd = SubCommand::SubComNew(SubComNew { name });
+            let level = if self.options.is_empty() {
+                Some(LogLevel::Info)
+            } else {
+                let index = self.options.pop().unwrap();
+                Some(index.parse::<LogLevel>().unwrap_or(LogLevel::Info))
+            };
+            comd = SubCommand::SubComNew(SubComNew {
+                name,
+                option: level,
+            });
         }
         /*
          *else if self.sub_command == "run" {
@@ -111,7 +120,8 @@ fn main() {
     let mut args: Vec<String> = std::env::args().collect();
     //println!("raw arguments: {:?}", args);
     args.remove(0); // remove the unnecessary path
-    let msgs = "Handy tool for dyer\n\nUSAGE:\n\tdyer-cli [subcommand] [options]\n\nSUBCOMMAND:\n\tnew:\t\tinitialize a new empty project\n\trun:\t\tcomplie and run the project\n\nOPTIONS:\n\t--error:\t\tset the log level as ERROR\n\t--warn: \t\tset the log level as WARN\n\t--info: \t\tset the log level as INFO\n\t--debug:\t\tset the debug level as DEBUG\n\t--trace:\t\tset the log level as TRACE".replace("\t", "    ");
+                    //let msgs = "Handy tool for dyer\n\nUSAGE:\n\tdyer-cli [subcommand] [options]\n\nSUBCOMMAND:\n\tnew:\t\tinitialize a new empty project\n\trun:\t\tcomplie and run the project\n\nOPTIONS:\n\t--error:\t\tset the log level as ERROR\n\t--warn: \t\tset the log level as WARN\n\t--info: \t\tset the log level as INFO\n\t--debug:\t\tset the debug level as DEBUG\n\t--trace:\t\tset the log level as TRACE".replace("\t", "    ");
+    let msgs = "Handy tool for dyer\n\nUSAGE:\n\tdyer-cli [subcommand] [options]\n\teg. dyer-cli new myproject --debug create a project with logger level INFO\n\nSUBCOMMAND:\n\tnew:\t\tinitialize a new empty project\n\nOPTIONS:\n\t--error:\t\tset the log level as ERROR\n\t--warn: \t\tset the log level as WARN\n\t--info: \t\tset the log level as INFO\n\t--debug:\t\tset the debug level as DEBUG\n\t--trace:\t\tset the log level as TRACE".replace("\t", "    ");
     if args.len() > 0 && !["-h", "--help"].contains(&args[0].as_str()) {
         let sub_command: SubCommand = Info::from(args.clone()).into();
         //println!("parsed info: {:?}", sub_command);

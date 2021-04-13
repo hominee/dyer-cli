@@ -23,7 +23,7 @@ the command will download the source code and complie it to build a executable f
 Dyer-cli provides some commands that helps you initialize, debug programm, but for now, only `dyer-cli new` supported, more commands are to go.
 
 ## dyer-cli new
-This command helps you initialize a project whose structure is
+This command helps you initialize a project with log level `Info`, other log levels vares from `Error`, `Warn`, `Info`, `Debug`, and `Trace`, and its structure is
 ```bash
 |___Cargo.toml
 |___Readme.md

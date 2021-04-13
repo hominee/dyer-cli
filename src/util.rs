@@ -96,7 +96,7 @@ use spider::MySpider;
 async fn main() {
     // initialize simple_logger use simple_logger to display some level-varied infomation
     simple_logger::SimpleLogger::new()
-        .with_level(log::LevelFilter::Info)
+        .with_level(log::LevelFilter::<+log_level+>)
         //.with_module_level("dyer", log::LevelFilter::Debug) // log level varied from modules
         .init()
         .unwrap();
