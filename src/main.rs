@@ -36,7 +36,6 @@
 //!     |___src/parser.rs
 //!     |___src/spider.rs
 //!     |___src/middleware.rs
-//!     |___src/main.rs
 //!     |___src/pipeline.rs
 //! ```
 //! Main functionality of each file:                                        
@@ -45,7 +44,6 @@
 //! * the `spider.rs` contains initial when opening and final things to do when closing
 //! * the `middleware.rs` contains Some middlewares that process data at runtime
 //! * the `pipeline.rs` contains entities manipulation including data-storage, displsying and so on
-//! * the `main.rs` combines all modules then build them up into a programm
 //! * `Cargo.toml` is the basic configuration of the project
 //! * `README.md` contains some instructions of the project
 //! * `data` folder balance the app load when data in app exceeds, and backup app data at certain gap
@@ -55,7 +53,7 @@
 mod subcommand;
 mod util;
 
-use subcommand::{SubComNew, /*SubComRun,*/ SubCommand};
+use subcommand::{SubComNew, SubComRun, SubCommand, SubComFix, SubComCheck};
 use util::LogLevel;
 
 #[derive(std::fmt::Debug)]
@@ -71,11 +69,9 @@ impl From<Vec<String>> for Info {
         let mut others = Vec::new();
         args.into_iter().for_each(|item: String| {
             if item.contains("--") {
-                let option = item.strip_prefix("--").unwrap().to_owned();
-                options.push(option);
+                options.push(item);
             } else if item.contains("-") {
-                let option = item.strip_prefix("-").unwrap().to_owned();
-                options.push(option);
+                options.push(item);
             } else {
                 others.push(item);
             }
@@ -102,16 +98,22 @@ impl Into<SubCommand> for Info {
                 name,
                 option: level,
             });
+        } else if self.sub_command == "run" {
+            let item = SubComRun {
+                options: self.options,
+            };
+            comd = SubCommand::SubComRun(item);
+        } else if self.sub_command == "fix" {
+            let item = SubComFix {
+                options: self.options,
+            };
+            comd = SubCommand::SubComFix(item);
+        } else if self.sub_command == "check" {
+            let item = SubComCheck{
+                options: self.options,
+            };
+            comd = SubCommand::SubComCheck(item);
         }
-        /*
-         *else if self.sub_command == "run" {
-         *    let level: LogLevel = self.options.pop().unwrap_or("Info".into()).parse().unwrap();
-         *    let item = SubComRun {
-         *        option: Some(level),
-         *    };
-         *    comd = SubCommand::SubComRun(item);
-         *}
-         */
         comd
     }
 }
@@ -120,8 +122,7 @@ fn main() {
     let mut args: Vec<String> = std::env::args().collect();
     //println!("raw arguments: {:?}", args);
     args.remove(0); // remove the unnecessary path
-                    //let msgs = "Handy tool for dyer\n\nUSAGE:\n\tdyer-cli [subcommand] [options]\n\nSUBCOMMAND:\n\tnew:\t\tinitialize a new empty project\n\trun:\t\tcomplie and run the project\n\nOPTIONS:\n\t--error:\t\tset the log level as ERROR\n\t--warn: \t\tset the log level as WARN\n\t--info: \t\tset the log level as INFO\n\t--debug:\t\tset the debug level as DEBUG\n\t--trace:\t\tset the log level as TRACE".replace("\t", "    ");
-    let msgs = "Handy tool for dyer\n\nUSAGE:\n\tdyer-cli [subcommand] [options]\n\teg. dyer-cli new myproject --debug create a project with logger level INFO\n\nSUBCOMMAND:\n\tnew:\t\tinitialize a new empty project\n\nOPTIONS:\n\t--error:\t\tset the log level as ERROR\n\t--warn: \t\tset the log level as WARN\n\t--info: \t\tset the log level as INFO\n\t--debug:\t\tset the debug level as DEBUG\n\t--trace:\t\tset the log level as TRACE".replace("\t", "    ");
+    let msgs = "Handy tool for dyer\n\nUSAGE:\n\tdyer-cli [subcommand] [options]\n\teg. dyer-cli new myproject --debug create a project with logger level INFO\n\nSUBCOMMAND:\n\tnew:\t\tinitialize a new empty project\n\trun:\t\ta warper of `cargo run`, compile and run the project\n\nOPTIONS:\n\tall options of `cargo run`\n\t--error:\t\tset the log level as ERROR\n\t--warn: \t\tset the log level as WARN\n\t--info: \t\tset the log level as INFO\n\t--debug:\t\tset the debug level as DEBUG\n\t--trace:\t\tset the log level as TRACE".replace("\t", "   ");
     if args.len() > 0 && !["-h", "--help"].contains(&args[0].as_str()) {
         let sub_command: SubCommand = Info::from(args.clone()).into();
         //println!("parsed info: {:?}", sub_command);

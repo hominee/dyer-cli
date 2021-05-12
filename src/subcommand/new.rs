@@ -19,7 +19,6 @@ impl SubComNew {
      *    |___src/parser.rs
      *    |___src/spider.rs
      *    |___src/middleware.rs
-     *    |___src/main.rs
      *    |___src/pipeline.rs
      */
     pub fn execute(&self) {
@@ -40,7 +39,6 @@ impl SubComNew {
             "parser",
             "spider",
             "middleware",
-            "main",
             "pipeline",
         ];
         indexs.iter().for_each(|index| {

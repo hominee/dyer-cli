@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::io::{BufRead, BufReader };
 
 #[derive(std::fmt::Debug)]
 pub enum LogLevel {
@@ -8,21 +9,22 @@ pub enum LogLevel {
     Debug,
     Trace,
 }
+
 impl FromStr for LogLevel {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "error" => Ok(Self::Error),
-            "warn" => Ok(Self::Warn),
-            "info" => Ok(Self::Info),
-            "debug" => Ok(Self::Debug),
-            "trace" => Ok(Self::Trace),
+            "--error" => Ok(Self::Error),
+            "--warn" => Ok(Self::Warn),
+            "--info" => Ok(Self::Info),
+            "--debug" => Ok(Self::Debug),
+            "--trace" => Ok(Self::Trace),
             _ => Err(()),
         }
     }
 }
 
-pub fn get_file_path<'a>(index: &'a str, name: String) -> String {
+pub(crate) fn get_file_path<'a>(index: &'a str, name: String) -> String {
     match index {
         "readme" => name + "/README.md",
         "cargo" => name + "/Cargo.toml",
@@ -30,12 +32,12 @@ pub fn get_file_path<'a>(index: &'a str, name: String) -> String {
         "parser" => name + "/src/parser.rs",
         "spider" => name + "/src/spider.rs",
         "middleware" => name + "/src/middleware.rs",
-        "main" => name + "/src/main.rs",
         "pipeline" => name + "/src/pipeline.rs",
         _ => panic!(),
     }
 }
-pub fn get_file_intro(index: &str) -> &str {
+
+pub(crate) fn get_file_intro(index: &str) -> &str {
     match index {
         "readme" => {
             r#"<!-- 
@@ -44,13 +46,16 @@ pub fn get_file_intro(index: &str) -> &str {
 --!>"#
         }
         "entity" => {
-            r#"// define data structure here to be used or collected
-// all data structures got to be Serializable and Deserializable
+            r#"/* define data structure here to be used or collected
+ * all data structures got to be Serializable and Deserializable
+ */
 
 use serde::{Deserialize, Serialize};
+use dyer::macros::entity;
 
-// the Entity to be used
 /*
+ * the Entity to be used
+ *
  *#[derive(Deserialize, Serialize, Debug, Clone)]
  *pub struct Item1 {
  *    pub field1: String,
@@ -58,7 +63,10 @@ use serde::{Deserialize, Serialize};
  *}
  */
 
-// serve as a placeholder for all entities, and generic parameter of dyer::App
+/* serve as a placeholder for all entities, and generic parameter of dyer::App
+ * attribute #[entity(entities)] mark the enum and use it as container to all data to be collected
+ */
+#[entity(entities)]
 #[derive(Serialize, Debug, Clone)]
 pub enum Entities {
     //Item1(Item1),
@@ -66,84 +74,42 @@ pub enum Entities {
 
 // serve as a appendix/complement to dyer::Task
 // providing more infomation for this Task, leave it empty if not necessary
+// attribute #[entity(targ)] mark the struct and use it as generic type for `Task`
+#[entity(targ)]
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Targ {}
 
 // serve as a appendix/complement to dyer::Profile
 // providing more infomation for this Profile, empty as default
+// attribute #[entity(parg)] mark the struct and use it as generic type for `Profile`
+#[entity(parg)]
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Parg {}"#
-        }
-        "main" => {
-            r#"extern crate dyer;
-extern crate serde;
-extern crate simple_logger;
-extern crate tokio;
-
-mod entity;
-mod middleware;
-mod parser;
-mod pipeline;
-mod spider;
-
-use dyer::{log, App};
-use entity::*;
-use middleware::get_middleware;
-use pipeline::get_pipeline;
-use spider::MySpider;
-
-#[tokio::main]
-async fn main() {
-    // initialize simple_logger use simple_logger to display some level-varied infomation
-    simple_logger::SimpleLogger::new()
-        .with_level(log::LevelFilter::<+log_level+>)
-        //.with_module_level("dyer", log::LevelFilter::Debug) // log level varied from modules
-        .init()
-        .unwrap();
-    let spd: MySpider = MySpider {};
-    // initialize the middleware
-    let middleware = get_middleware();
-    // initialize the pipeline
-    let pipeline = get_pipeline();
-    // construct the app and start the crawler
-    let mut app: App<Entities, Targ, Parg> = App::<Entities, Targ, Parg>::new();
-    // AppArg configuration, custiomize your app including:
-    // rate control, history file usage, app load balance and so on
-    // more details see https://docs.rs/dyer/engine/struct.AppArg.html
-    app.rt_args.lock().unwrap().skip_history = true;
-    /*
-     *app.rt_args.lock().unwrap().round_req_max = 100;
-     *app.rt_args.lock().unwrap().gap = 10;
-     */
-    app.run(&spd, &middleware, pipeline).await.unwrap();
-}"#
         }
         "middleware" => {
             r#"// Middleware that processes the data before reaching PipeLine
 // including dealing with errors, data structures, runtime modification
 
 use crate::entity::{Entities, Parg, Targ};
-use dyer::{plug, App, FutureExt, MiddleWare};
+use dyer::App;
+use dyer::macros::middleware;
 
-// there are 7 methods availible:
-//     1. hand_profile
-//     2. hand_task
-//     3. hand_req
-//     4. hand_res
-//     5. hand_item
-//     6. hand_err
-//     7. hand_yerr
+// there are 7 methods(attributes) availible:
+//     1. handle_profile
+//     2. handle_task
+//     3. handle_req
+//     4. handle_res
+//     5. handle_entity
+//     6. handle_err
+//     7. handle_yerr
 // you can specify some of them if necessary, others are assigned as default
-// More details in https://docs.rs/dyer/plugin/middleware/struct.MiddleWare.html
+// More details in https://docs.rs/dyer/1.1.3/dyer/plugin/middleware/struct.MiddleWare.html
 
 // process Entities if necessary
-pub async fn hand_item(_items: &mut Vec<Entities>, _app: &mut App<Entities, Targ, Parg>) {}
-
-pub fn get_middleware<'md>() -> MiddleWare<'md, Entities, Targ, Parg> {
-    plug!( MiddleWare<Entities, Targ, Parg> {
-        hand_item: hand_item,
-    })
-}"#
+// attribute #[middleware(handle_entity)] mark the method and use it as handle_entity in `MiddleWare`
+#[middleware(handle_entity)]
+pub async fn handle_entities(_items: &mut Vec<Entities>, _app: &mut App<Entities, Targ, Parg>) {}
+"#
         }
         "parser" => {
             r#"// Parsers that extract entities from Response
@@ -151,80 +117,102 @@ pub fn get_middleware<'md>() -> MiddleWare<'md, Entities, Targ, Parg> {
 
 use crate::entity::{Entities, Parg, Targ};
 use dyer::{ParseResult, Response};
+use dyer::macros::parser;
 
-// note that call this function to parse via specifying:
-//     let task = Task::default();
-//     ...
-//     task.parser = "parse_index".to_string();
-// that means function `parse_index` is called once the task being executed successfully and
-// becoming response.
+/* note that call this function to parse via specifying task.parser:
+ *     let task = Task::new();
+ *     ...
+ *     task.parser = "parse_index".into();
+ * that means function `parse_index` is called once the task being executed successfully and
+ * becoming response.
+ * attribute #[parser] mark the method and use it extract entities from `Response` marked with
+ * string "parse_index"
+ */
+#[parser]
 pub fn parse_index(_res: Response<Targ, Parg>) -> ParseResult<Entities, Targ, Parg> {
-    ParseResult::default()
+    ParseResult::new()
 }"#
         }
         "pipeline" => {
-            r#"// PipeLine that consume all entities, the end of data flow
-// stdout the data as default, customaization is need for data storage
+            r#"/* PipeLine that consume all entities, the end of data flow
+ * print out the data as default, customaization is need for data storage
+ *
+ * there 4 methods(attributes) availible:
+ *     1. open_pipeline
+ *     2. close_pipeline
+ *     3. process_item
+ *     4. process_yerr
+ * more details see https://docs.rs/dyer/1.1.3/dyer/plugin/pipeline/struct.PipeLine.html
+ *
+ */ 
 
-// there 4 methods availible:
-//     1. open_pipeline
-//     2. close_pipeline
-//     3. process_item
-//     4. process_yerr
-// more details see https://docs.rs/dyer/plugin/pipeline/struct.PipeLine.html
+  dyer::macros::pipeline;
 
-use crate::entity::Entities;
-use dyer::{plug, FutureExt, PipeLine};
-
-// something to do before sending entities to pipeline
-// note that this function only runs one time
-async fn open_pipeline<'a>() -> &'a Option<std::fs::File> {
+ /*
+ * something to do before sending entities to pipeline
+ * note that this `open_pipeline` function only runs one time
+ * and the return type inside `Option` requires complete path(starts with `std` or crate in `Cargo.toml`)
+ * attribute #[pipeline(open_pipeline)] mark the method and use it as open_pipeline in `PipeLine` 
+ */
+#[pipeline(open_pipeline)]
+pub async fn open_pl<'a>() -> &'a Option<std::fs::File> {
     &None
 }
-
-pub fn get_pipeline<'pl>() -> PipeLine<'pl, Entities, std::fs::File> {
-    plug!(PipeLine<Entities, std::fs::File> {
-        open_pipeline: open_pipeline,
-    })
-}"#
+"#
         }
         "spider" => {
             r#"// Set up initial condition when stepping into Spider and work to do when closing spider
 
 use crate::entity::{Entities, Parg, Targ};
 use crate::parser::*;
-use dyer::{plug, App, ParseResult, ProfileInfo, Request, Response, Spider, Task};
+use dyer::*;
+use dyer::macros::spider;
 
 type Stem<U> = Result<U, Box<dyn std::error::Error + Send + Sync>>;
 type Btem<E, T, P> = dyn Fn(Response<T, P>) -> ParseResult<E, T, P>;
 
-pub struct MySpider {}
+// attribute #[spider] mark the struct and use it as a type implemented trait `Spider`
+#[spider]
+pub struct MySpider {
+    pub start_uri: String,
+}
 
 impl Spider<Entities, Targ, Parg> for MySpider {
+    // create an instance 
+    fn new() -> Self {
+        MySpider{
+            start_uri: "https://example.com/some/path/to/site".into()
+        }
+    }
+
     // preparation before opening spider
     fn open_spider(&self, _app: &mut App<Entities, Targ, Parg>) {}
 
-    // `Task` to be executed when starting `dyer`. Note that this function must reproduce a
-    // non-empty vector, if not, the whole program will be left at blank.
+    /* 
+     * `Task` to be executed when starting `dyer`. Note that this function must reproduce a
+     * non-empty vector, if not, the whole program will be left at blank.
+     */
     fn entry_task(&self) -> Stem<Vec<Task<Targ>>> {
         Ok(vec![])
     }
 
-    // the generator of `Profile`
-    // `dyer` consume the returned `Request`, generate a `Response` fed to the closure
-    // to generate a `Profile`
+    /* the generator of `Profile`
+     * `dyer` consume the returned `Request`, generate a `Response` fed to the closure
+     * to generate a `Profile`
+     */
     fn entry_profile<'a>(&self) -> ProfileInfo<'a, Targ, Parg> {
         ProfileInfo {
-            req: Request::<Targ, Parg>::default(),
+            req: Some( Request::<Targ, Parg>::new() ),
             parser: None,
         }
     }
 
-    // set up parser that extracts `Entities` from the `Response`
-    // by the name of Task.parser return the parser function
-    //parser is indexed by a `String` name, like:
-    //task.parser = "parse_quote".to_string();
-    fn get_parser<'a>(&self, ind: String) -> Option<&'a Btem<Entities, Targ, Parg>> {
+    /* set up parser that extracts `Entities` from the `Response`
+     * by the name of Task.parser return the parser function
+     * parser is indexed by a `String` name, like:
+     * task.parser = "parse_quote".to_string();
+     */
+    fn get_parser<'a>(&self, ind: &str) -> Option<&'a Btem<Entities, Targ, Parg>> {
         plug!(get_parser(ind; parse_index))
     }
 
@@ -236,17 +224,42 @@ impl Spider<Entities, Targ, Parg> for MySpider {
             r#"[package]
 name = "<+name+>"
 version = "0.1.0"
-authors = ["<+author+>"]
+authors = ["your name"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dyer = { version = "*" }
-serde = { version = "*", features = ["derive"] }
+dyer = { version = "1.2" }
+serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "0.2", features = ["rt-threaded", "macros"]}
-simple_logger = "*""#
+simple_logger = "1.11""#
         }
         _ => "",
     }
+}
+
+pub(crate) fn run_command(cmd: &str, options: Vec<&str>) {
+    let stdout = std::process::Command::new(cmd)
+        .args(options)
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap()
+        .stdout
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Could not capture standard output.",
+            )
+        })
+        .unwrap();
+
+    let reader = BufReader::new(stdout);
+
+    reader
+        .lines()
+        .filter_map(|line| line.ok())
+        .filter(|line| line.find("src\\main.rs").is_none())
+        .filter(|line| line.find("src/main.rs").is_none())
+        .for_each(|line| println!("{}", line));
 }
