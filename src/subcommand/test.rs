@@ -1,12 +1,13 @@
+
 use crate::util;
 use crate::subcommand::run::MetaData;
 
 #[derive(std::fmt::Debug)]
-pub struct SubComFix {
+pub struct SubComTest{
     pub options: Vec<String>,
 }
 
-impl SubComFix {
+impl SubComTest{
     pub fn execute(&self) {
         let paths = std::fs::read_dir("./.target").unwrap().map(|p| p.unwrap().path().to_str().unwrap().into() ).collect::<Vec<String>>();
         //println!("files in \"./\" {:?}", paths);
@@ -15,11 +16,18 @@ impl SubComFix {
             meta.init();
             //println!("{:?}", meta);
             meta.make_main();
-            let args = vec!["check"];
-            util::run_command("cargo", args);
         }
-            let options = self.options.iter().map(|op| op.as_str()).filter(|op| op != &"--allow-no-vcs" ).collect::<Vec<&str>>();
-            let mut args = vec!["fix","--allow-no-vcs"];
+            let options = self.options.iter()
+                .map(|op| op.as_str())
+                .filter(|op| {
+                    if ["--off", "--error", "--warn", "--info", "--debug", "--trace"].contains(&op) {
+                        util::change_log_level(op);
+                        return false;
+                    }
+                    true
+                })
+                .collect::<Vec<&str>>();
+            let mut args = vec!["test"];
             args.extend( options) ;
             util::run_command("cargo", args);
     }

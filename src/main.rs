@@ -37,6 +37,7 @@
 //!     |___src/spider.rs
 //!     |___src/middleware.rs
 //!     |___src/pipeline.rs
+//!     |___src/lib.rs
 //! ```
 //! Main functionality of each file:                                        
 //! * the `entity.rs` contains entities/data structure to be used/collected
@@ -47,13 +48,35 @@
 //! * `Cargo.toml` is the basic configuration of the project
 //! * `README.md` contains some instructions of the project
 //! * `data` folder balance the app load when data in app exceeds, and backup app data at certain gap
-// ## dyer-cli run
-// This command build your programm and run it with log level `Info`, other log levels vares from `Error`, `Warn`, `Info`, `Debug`, and `Trace`, `--no-log` to disable log out.
+//!
+//! ## dyer-cli check
+//!
+//! A warper of `cargo check`, if you run it the first time,`dyer-cli` will download the crates and then check the code. 
+//! 
+//! ## dyer-cli fix
+//!
+//! A wraper of `cargo fix`,  if some warning happens such as `unused import` or `dead code` the command does a lot for you. However it won't help if some errors occur, if so, you have to debug the code manually.
+//! 
+//! ## dyer-cli run
+//!
+//! A wraper of `cargo run`, when the program compiles, run it.
+//! 
+//! ## dyer-cli build
+//!
+//! A wraper of `cargo build`,   build the program.
+//! 
+//! ## dyer-cli test
+//!
+//! A wraper of `cargo test`,   test the program.
+//! 
+//! ## dyer-cli clean
+//!
+//! A wraper of `cargo clean`,   clean the directory.
 
 mod subcommand;
 mod util;
 
-use subcommand::{SubComNew, SubComRun, SubCommand, SubComFix, SubComCheck};
+use subcommand::{SubComNew, SubComRun, SubComBuild, SubCommand, SubComFix, SubComCheck, SubComClean, SubComTest};
 use util::LogLevel;
 
 #[derive(std::fmt::Debug)]
@@ -98,7 +121,7 @@ impl Into<SubCommand> for Info {
                 name,
                 option: level,
             });
-        } else if self.sub_command == "run" {
+        } else if ["run".into(), "r".into()].contains( &self.sub_command ) {
             let item = SubComRun {
                 options: self.options,
             };
@@ -108,11 +131,26 @@ impl Into<SubCommand> for Info {
                 options: self.options,
             };
             comd = SubCommand::SubComFix(item);
-        } else if self.sub_command == "check" {
+        } else if ["c".into(), "check".into()].contains(&self.sub_command) {
             let item = SubComCheck{
                 options: self.options,
             };
             comd = SubCommand::SubComCheck(item);
+        } else if ["b".into(), "build".into()].contains(&self.sub_command) {
+            let item = SubComBuild{
+                options: self.options,
+            };
+            comd = SubCommand::SubComBuild(item);
+        } else if ["t".into(), "test".into()].contains(&self.sub_command) {
+            let item = SubComTest{
+                options: self.options,
+            };
+            comd = SubCommand::SubComTest(item);
+        } else if ["clean".into()].contains(&self.sub_command) {
+            let item = SubComClean{
+                options: self.options,
+            };
+            comd = SubCommand::SubComClean(item);
         }
         comd
     }
@@ -122,7 +160,7 @@ fn main() {
     let mut args: Vec<String> = std::env::args().collect();
     //println!("raw arguments: {:?}", args);
     args.remove(0); // remove the unnecessary path
-    let msgs = "Handy tool for dyer\n\nUSAGE:\n\tdyer-cli [subcommand] [options]\n\teg. dyer-cli new myproject --debug create a project with logger level INFO\n\nSUBCOMMAND:\n\tnew:\t\tinitialize a new empty project\n\trun:\t\ta warper of `cargo run`, compile and run the project\n\nOPTIONS:\n\tall options of `cargo run`\n\t--error:\t\tset the log level as ERROR\n\t--warn: \t\tset the log level as WARN\n\t--info: \t\tset the log level as INFO\n\t--debug:\t\tset the debug level as DEBUG\n\t--trace:\t\tset the log level as TRACE".replace("\t", "   ");
+    let msgs = "Handy tool for dyer\n\nUSAGE:\n\tdyer-cli [subcommand] [options]\n\teg. dyer-cli new myproject --debug create a project with logger level INFO\n\nSUBCOMMAND:\n\tnew:\t\tinitialize a new empty project\n\tcheck:\t a wraper of `cargo check`\n\tfix:\t\ta wraper of `cargo fix`\n\trun:\t\ta wraper of `cargo run`, compile and run the project\n\tbuild:\t a wraper of `cargo build`\n\ttest:\t  a wraper of `cargo test`\n\tclean:\t a wraper of `cargo clean`\n\nOPTIONS:\n\tall options of `cargo SUBCOMMAND`\n\t--off:\t\t  set the log level as Off\n\t--error:\t\tset the log level as ERROR\n\t--warn: \t\tset the log level as WARN\n\t--info: \t\tset the log level as INFO\n\t--debug:\t\tset the debug level as DEBUG\n\t--trace:\t\tset the log level as TRACE".replace("\t", "   ");
     if args.len() > 0 && !["-h", "--help"].contains(&args[0].as_str()) {
         let sub_command: SubCommand = Info::from(args.clone()).into();
         //println!("parsed info: {:?}", sub_command);

@@ -15,6 +15,7 @@ pub(crate) struct MetaData {
     pkgs: Vec<String>,
     ctype: String,
     base_dir: String,
+    package_name: String,
 }
 
 impl MetaData {
@@ -24,6 +25,7 @@ impl MetaData {
             pkgs: vec!["std".to_string()],
             ctype: String::new(),
             base_dir: "./".into(),
+            package_name: String::new(),
         }
     }
 
@@ -70,7 +72,8 @@ impl MetaData {
         let mut pkgs = Vec::new();
         let file = std::fs::File::open(path).unwrap();
         let reader = BufReader::new(file);
-        let pat = regex::Regex::new(r"\s*(\w+)\s*=\s*").unwrap();
+        let pat = regex::Regex::new(r"\s*([\w|-]+)\s*=\s*").unwrap();
+        let pat1 = regex::Regex::new(r"^\s*name\s*=.*?(?P<pkg_name>[\w|-]+)").unwrap();
         let pat2 = regex::Regex::new(r"^\s*\[dependencies\]").unwrap();
         let pat3 = regex::Regex::new(r"^\s*\[.*?\]").unwrap();
         let mut in_content = false;
@@ -83,10 +86,13 @@ impl MetaData {
             }
             if in_content {
                 if let Some(t) = pat.captures(&text) {
-                    let pkg = t.get(1).unwrap().as_str().trim().to_owned();
-                    //dbg!("package: {:?}", pkg);
+                    let pkg = t.get(1).unwrap().as_str().trim().replace("-", "_");
                     pkgs.push(pkg)
                 }
+            }
+            if pat1.is_match(&text) {
+                let name = pat1.captures(&text).unwrap().name("pkg_name").unwrap().as_str().replace("-", "_");
+                self.package_name = name.into();
             }
         }
         self.pkgs.extend(pkgs);
@@ -129,17 +135,13 @@ impl MetaData {
         let ctype = &self.ctype;
         let ctype_import = self.complete_path();
         let get_pkg_list = self.get_pkg_list();
+        let package_name = &self.package_name;
 
         let main_str = r"//#![allow(unused_imports)]
 
 <+get_pkg_list+>
 
-mod entity;
-mod spider;
-mod parser;
-mod middleware;
-mod pipeline;
-
+use <+package_name+>::*; 
 use dyer::*;
 use entity::{<+entities+>, <+targ+>, <+parg+>};
 use spider::<+spider+>;
@@ -150,6 +152,10 @@ use std::sync::{Arc, Mutex};
 
 #[tokio::main]
 async fn main() {
+    simple_logger::SimpleLogger::new()
+        .with_level(log::LevelFilter::Info)
+        .init()
+        .unwrap();
     let middleware = plug!( MiddleWare<<+entities+>, <+targ+>, <+parg+>> {
         <+get_middleware_map+>
     });
@@ -161,6 +167,7 @@ async fn main() {
     app.run(&spider, &middleware, pipeline).await.unwrap();
 }
         ";
+        let main_str = main_str.replace("<+package_name+>", &package_name);
         let main_str = main_str.replace("<+entities+>", &entities);
         let main_str = main_str.replace("<+targ+>", &targ);
         let main_str = main_str.replace("<+parg+>", &parg);
@@ -172,7 +179,7 @@ async fn main() {
         let main_str = main_str.replace("<+get_pipeline_map+>", &get_pipeline_map);
         let main_str = main_str.replace("<+ctype+>", ctype);
         let main_str = main_str.replace("<+ctype_import+>", &ctype_import);
-        let main_path = format!("{}src/main.rs", self.base_dir);
+        let main_path = format!("{}.target/main.rs", self.base_dir);
         let mut main_file = std::fs::OpenOptions::new()
             .create(true)
             .write(true)
@@ -209,12 +216,24 @@ impl Module {
 
 impl SubComRun {
     pub fn execute(&self) {
-        let mut meta = MetaData::new();
-        meta.init();
-        //println!("{:?}", meta);
-        meta.make_main();
-        //util::run_command("cargo", vec!["fix"]);
-        let options = self.options.iter().map(|op| op.as_str()).collect::<Vec<&str>>();
+        let paths = std::fs::read_dir("./.target").unwrap().map(|p| p.unwrap().path().to_str().unwrap().into() ).collect::<Vec<String>>();
+        //println!("files in \"./\" {:?}", paths);
+        if !paths.iter().fold(false, |acc, x| acc || x.contains(&"main.rs".to_owned())) {
+            let mut meta = MetaData::new();
+            meta.init();
+            //println!("{:?}", meta);
+            meta.make_main();
+        }
+        let options = self.options.iter()
+            .map(|op| op.as_str())
+            .filter(|op| {
+                if ["--off", "--error", "--warn", "--info", "--debug", "--trace"].contains(&op) {
+                    util::change_log_level(op);
+                    return false;
+                }
+                true
+            })
+            .collect::<Vec<&str>>();
         let mut args = vec!["run"];
         args.extend( options) ;
         util::run_command("cargo", args);

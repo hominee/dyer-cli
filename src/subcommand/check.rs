@@ -9,7 +9,8 @@ pub struct SubComCheck {
 
 impl SubComCheck {
     pub fn execute(&self) {
-        let paths = std::fs::read_dir("./src").unwrap().map(|p| p.unwrap().path().to_str().unwrap().into() ).collect::<Vec<String>>();
+        let paths = std::fs::read_dir("./.target").unwrap().map(|p| p.unwrap().path().to_str().unwrap().into() ).collect::<Vec<String>>();
+        //println!("files in \"./\" {:?}", paths);
         if !paths.iter().fold(false, |acc, x| acc || x.contains(&"main.rs".to_owned())) {
             let mut meta = MetaData::new();
             meta.init();

@@ -31,6 +31,7 @@ impl SubComNew {
             LogLevel::Trace => "Trace",
         };
         std::fs::create_dir_all(format!("{}/data/tasks/", name)).unwrap();
+        std::fs::create_dir_all(format!("{}/.target/", name)).unwrap();
         std::fs::create_dir_all(format!("{}/src", name)).unwrap();
         let indexs = [
             "cargo",
@@ -40,6 +41,8 @@ impl SubComNew {
             "spider",
             "middleware",
             "pipeline",
+            "lib",
+            "config",
         ];
         indexs.iter().for_each(|index| {
             let path = get_file_path(index, name.clone());

@@ -35,12 +35,22 @@ This command helps you initialize a project with log level `Info`, other log lev
     |___src/spider.rs
     |___src/middleware.rs
     |___src/pipeline.rs
+    |___src/lib.rs
 ```
 ## dyer-cli check
-A warper of `cargo check`, if you run it the first time,`dyer-cli` will generate it for you which you need not worry about and download the crates and then check the code. 
+A warper of `cargo check`, if you run it the first time,`dyer-cli` will download the crates and then check the code. 
 
 ## dyer-cli fix
-A wraper of `cargo fix`, generate `main.rs` is missing, if some warning happens such as `unused import` or `dead code` the command does a lot for you. However it won't help if some errors occur, if so, you have to debug the code manually.
+A wraper of `cargo fix`,  if some warning happens such as `unused import` or `dead code` the command does a lot for you. However it won't help if some errors occur, if so, you have to debug the code manually.
 
 ## dyer-cli run
-A wraper of `cargo run`, generate `main.rs` is missing, when the program compiles, run it.
+A wraper of `cargo run`, when the program compiles, run it.
+
+## dyer-cli build
+A wraper of `cargo build`,   build the program.
+
+## dyer-cli test
+A wraper of `cargo test`,   test the program.
+
+## dyer-cli clean
+A wraper of `cargo clean`,   clean the directory.
