@@ -37,7 +37,6 @@
 //!     |___src/spider.rs
 //!     |___src/middleware.rs
 //!     |___src/pipeline.rs
-//!     |___src/lib.rs
 //! ```
 //! Main functionality of each file:                                        
 //! * the `entity.rs` contains entities/data structure to be used/collected

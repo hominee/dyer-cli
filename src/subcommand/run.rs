@@ -15,7 +15,7 @@ pub(crate) struct MetaData {
     pkgs: Vec<String>,
     ctype: String,
     base_dir: String,
-    package_name: String,
+    pub package_name: String,
 }
 
 impl MetaData {
@@ -140,13 +140,13 @@ impl MetaData {
         let main_str = r"//#![allow(unused_imports)]
 
 <+get_pkg_list+>
+extern crate <+package_name+>; 
 
-use <+package_name+>::*; 
 use dyer::*;
-use entity::{<+entities+>, <+targ+>, <+parg+>};
-use spider::<+spider+>;
-use middleware::{<+get_middleware_list+>};
-use pipeline::{<+get_pipeline_list+>};
+use <+package_name+>::entity::{<+entities+>, <+targ+>, <+parg+>};
+use <+package_name+>::<+spider+>;
+use <+package_name+>::middleware::{<+get_middleware_list+>};
+use <+package_name+>::pipeline::{<+get_pipeline_list+>};
 use std::sync::{Arc, Mutex};
 <+ctype_import+>
 
@@ -179,7 +179,7 @@ async fn main() {
         let main_str = main_str.replace("<+get_pipeline_map+>", &get_pipeline_map);
         let main_str = main_str.replace("<+ctype+>", ctype);
         let main_str = main_str.replace("<+ctype_import+>", &ctype_import);
-        let main_path = format!("{}.target/main.rs", self.base_dir);
+        let main_path = format!("{}src/bin/{}.rs", self.base_dir, package_name);
         let mut main_file = std::fs::OpenOptions::new()
             .create(true)
             .write(true)
@@ -216,9 +216,10 @@ impl Module {
 
 impl SubComRun {
     pub fn execute(&self) {
-        let paths = std::fs::read_dir("./.target").unwrap().map(|p| p.unwrap().path().to_str().unwrap().into() ).collect::<Vec<String>>();
+        let paths = std::fs::read_dir("./src/bin").unwrap().map(|p| p.unwrap().path().to_str().unwrap().into() ).collect::<Vec<String>>();
         //println!("files in \"./\" {:?}", paths);
-        if !paths.iter().fold(false, |acc, x| acc || x.contains(&"main.rs".to_owned())) {
+        let pkg_name = util::get_package_name();
+        if !paths.iter().fold(false, |acc, x| acc || x.contains(&pkg_name)) {
             let mut meta = MetaData::new();
             meta.init();
             //println!("{:?}", meta);

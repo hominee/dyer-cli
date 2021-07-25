@@ -35,7 +35,6 @@ This command helps you initialize a project with log level `Info`, other log lev
     |___src/spider.rs
     |___src/middleware.rs
     |___src/pipeline.rs
-    |___src/lib.rs
 ```
 ## dyer-cli check
 A warper of `cargo check`, if you run it the first time,`dyer-cli` will download the crates and then check the code. 
