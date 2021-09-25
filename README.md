@@ -17,12 +17,12 @@ then you are ready to go, the following code would suffice.
 ```bash
 cargo install dyer-cli
 ```
-the command will download the source code and complie it to build a executable file inside your `$HOME/.cargo/bin`
+the command will download the source code and complie it to build a executable file inside your `$HOME/.cargo/bin`, make sure it's in your `$PATH`
 
 # Commands
-Dyer-cli provides some commands that helps you initialize, debug programm, but for now, only `dyer-cli new` supported, more commands are to go.
+Dyer-cli provides some commands that helps you initialize, debug programm, more commands are to go.
 
-## dyer-cli new
+## dyer new
 This command helps you initialize a project with log level `Info`, other log levels vares from `Error`, `Warn`, `Info`, `Debug`, and `Trace`, and its structure is
 ```bash
 |___Cargo.toml
@@ -36,20 +36,20 @@ This command helps you initialize a project with log level `Info`, other log lev
     |___src/middleware.rs
     |___src/pipeline.rs
 ```
-## dyer-cli check
-A warper of `cargo check`, if you run it the first time,`dyer-cli` will download the crates and then check the code. 
+## dyer check
+Alias `dyer c`, A warper of `cargo check`, if you run it the first time,`dyer-cli` will download the crates and then check the code. 
 
-## dyer-cli fix
-A wraper of `cargo fix`,  if some warning happens such as `unused import` or `dead code` the command does a lot for you. However it won't help if some errors occur, if so, you have to debug the code manually.
+## dyer fix
+Alias `dyer f`, A wraper of `cargo fix`,  if some warning happens such as `unused import` or `dead code` the command does a lot for you. However it won't help if some errors occur, if so, you have to debug the code manually.
 
-## dyer-cli run
-A wraper of `cargo run`, when the program compiles, run it.
+## dyer run
+Alias `dyer r`, A wraper of `cargo run`, when the program compiles, run it.
 
-## dyer-cli build
-A wraper of `cargo build`,   build the program.
+## dyer build
+Alias `dyer b`, A wraper of `cargo build`,   build the program.
 
-## dyer-cli test
-A wraper of `cargo test`,   test the program.
+## dyer test
+Alias `dyer t`, A wraper of `cargo test`,   test the program.
 
-## dyer-cli clean
+## dyer clean
 A wraper of `cargo clean`,   clean the directory.

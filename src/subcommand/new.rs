@@ -1,7 +1,7 @@
 use crate::util::{get_file_intro, get_file_path, LogLevel};
 use std::io::Write;
 
-// dyer-cli new <+name+>
+// dyer new <+name+>
 #[derive(std::fmt::Debug)]
 pub struct SubComNew {
     pub name: String,
