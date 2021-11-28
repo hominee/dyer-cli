@@ -1,11 +1,11 @@
 //! # Introduction
-//! [Dyer-cli] is a great tool created to guide you use [dyer] fast and at ease, helps you build a robust crawler, data processor, netwrok program fast and correctly.
+//! [dyer-cli] is a great tool created to guide you use [dyer] fast and at ease, helps you build a robust crawler, data processor, netwrok program fast and correctly.
 //!
-//! [Dyer-cli]: https://github.com/HomelyGuy/dyer-cli
+//! [dyer-cli]: https://github.com/HomelyGuy/dyer-cli
 //! [dyer]: https://github.com/HomelyGuy/dyer
 //!
 //! # Installation
-//! Dyer-cli is built completely by Rust programming language without extra dependencies, So rust must be installed beforehand, to test it with:
+//! dyer-cli is built completely by Rust programming language without extra dependencies, So rust must be installed beforehand, to test it with:
 //! ```bash
 //! rustup --version
 //! ```
@@ -32,14 +32,15 @@
 //! |___src/
 //!     |___src/entity.rs
 //!     |___src/parser.rs
-//!     |___src/spider.rs
+//!     |___src/actor.rs
 //!     |___src/middleware.rs
 //!     |___src/pipeline.rs
 //! ```
 //! Main functionality of each file:                                        
+//! * the `affix.rs` serves as an actor to adjust and satisfy additional requirement
 //! * the `entity.rs` contains entities/data structure to be used/collected
 //! * the `parser.rs` contains functions that extract entities from response
-//! * the `spider.rs` contains initial when opening and final things to do when closing
+//! * the `actor.rs` contains initial when opening and final things to do when closing
 //! * the `middleware.rs` contains Some middlewares that process data at runtime
 //! * the `pipeline.rs` contains entities manipulation including data-storage, displsying and so on
 //! * `Cargo.toml` is the basic configuration of the project

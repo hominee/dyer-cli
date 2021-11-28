@@ -17,7 +17,7 @@ impl SubComNew {
      *|___src/
      *    |___src/entity.rs
      *    |___src/parser.rs
-     *    |___src/spider.rs
+     *    |___src/actor.rs
      *    |___src/middleware.rs
      *    |___src/pipeline.rs
      */
@@ -38,7 +38,8 @@ impl SubComNew {
             "readme",
             "entity",
             "parser",
-            "spider",
+            "affix",
+            "actor",
             "middleware",
             "pipeline",
             "config",

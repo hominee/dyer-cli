@@ -21,7 +21,7 @@ impl SubComCheck {
                 .iter()
                 .fold(false, |acc, x| acc || x.ends_with(&pkg_name))
         {
-            println!("    initializing the main function inside strc/bin/ ...");
+            println!("    initializing the main function inside src/bin/ ...");
             meta.make_main();
         }
         let options = self

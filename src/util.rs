@@ -1,5 +1,5 @@
+use std::io::{BufRead, BufReader, Read, Write};
 use std::str::FromStr;
-use std::io::{BufRead, BufReader, Read, Write };
 
 #[derive(std::fmt::Debug)]
 pub enum LogLevel {
@@ -31,25 +31,34 @@ pub fn get_package_name() -> String {
     for line in reader.lines() {
         let text = line.unwrap();
         if pat1.is_match(&text) {
-            let name = pat1.captures(&text).unwrap().name("pkg_name").unwrap().as_str().replace("-", "_");
+            let name = pat1
+                .captures(&text)
+                .unwrap()
+                .name("pkg_name")
+                .unwrap()
+                .as_str()
+                .replace("-", "_");
             return name.into();
         }
     }
     panic!("the target file cannot be found, put `path = 'src/bin/<+target+>.rs'` in your Cargo.toml file!");
-
 }
 
 pub(crate) fn get_file_path<'a>(index: &'a str, name: String) -> String {
     match index {
         "readme" => name + "/README.md",
-        "config" => name + "/config",
+        "config" => name + "/dyer.cfg",
         "cargo" => name + "/Cargo.toml",
+        "affix" => name + "/src/affix.rs",
         "entity" => name + "/src/entity.rs",
         "parser" => name + "/src/parser.rs",
-        "spider" => name + "/src/spider.rs",
+        "actor" => name + "/src/actor.rs",
         "middleware" => name + "/src/middleware.rs",
         "pipeline" => name + "/src/pipeline.rs",
-        _ => panic!(),
+        _ => {
+            println!("Invalid name: {}", index);
+            panic!()
+        }
     }
 }
 
@@ -61,154 +70,153 @@ pub(crate) fn get_file_intro(index: &str) -> &str {
 - Instructions of the project specified here 
 --!>"#
         }
+        "affix" => {
+            r#"use dyer::*;
+
+#[dyer::affix]
+pub struct Aff {} 
+
+#[dyer::async_trait]
+impl Affixor for Aff {
+    async fn init(&mut self) { }
+    async fn invoke(&mut self) -> Option<Request> {
+        None
+    }
+    async fn after_invoke(&mut self) {}
+    async fn before_parse(&mut self, _: Option<&mut Result<Response, MetaResponse>>) {}
+    async fn parse(&mut self, _: Option<Result<Response, MetaResponse>>) -> Option<Affix> {
+        None
+    }
+    async fn after_parse(&mut self) {}
+    async fn close(&mut self) {}
+}
+"#
+        }
         "entity" => {
             r#"use serde::{Deserialize, Serialize};
-use dyer::dyer_macros::entity;
 
-/*
- * the Entity to be used
- *
- *#[derive(Deserialize, Serialize, Debug, Clone)]
- *pub struct Item1 {
- *    pub field1: String,
- *    pub field2: i32,
- *}
- */
-
-/* serve as a placeholder for all entities, and generic parameter of dyer::App
- * attribute #[entity(entities)] mark the enum and use it as container to all data to be collected
- */
-#[entity(entities)]
-#[derive(Serialize, Debug, Clone)]
-pub enum Entities {
-    //Item1(Item1),
+// the Entity to be used
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct Item1 {
+    pub field1: String,
+    pub field2: i32,
 }
 
-// serve as a appendix/complement to dyer::Task,
-// leave it empty if not necessary
-// attribute #[entity(targ)] mark the struct and use it as generic type for `Task`
-#[entity(targ)]
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct Targ {}
-
-// serve as a appendix/complement to dyer::Profile
-// leave it empty as default
-// attribute #[entity(parg)] mark the struct and use it as generic type for `Profile`
-#[entity(parg)]
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct Parg {}"#
+/* serve as a container for all entities, and generic parameter of dyer::App
+ * attribute #[dyer::entity(entities)] mark the enum and use it as container to all data to be collected
+ */
+#[dyer::entity(entities)]
+#[derive(Serialize, Debug, Clone)]
+pub enum Entities {
+    Item1(Item1),
+}
+"#
         }
         "middleware" => {
-            r#"use crate::entity::{Entities, Parg, Targ};
-use dyer::App;
-use dyer::dyer_macros::middleware;
+            r#"use crate::entity::*;
+use dyer::*;
 
-/* attribute #[middleware(attr)] mark the method and use it as that in `MiddleWare`
+/* attribute #[dyer::middleware(attr)] mark the method and use it as that in `MiddleWare`
  * attr could be :
- *    handle_entity/handle_req/handle_task/handle_profile
+ *    handle_entity/handle_req/handle_task/handle_affix
  *    /handle_res/handle_err/handle_yerr
  */
-#[middleware(handle_entity)]
-pub async fn handle_entities(_items: &mut Vec<Entities>, _app: &mut App<Entities, Targ, Parg>) {}
+#[dyer::middleware(handle_entity)]
+pub async fn handle_entities(_items: &mut Vec<Entities>, _app: &mut App<Entities>) {}
 "#
         }
         "parser" => {
-            r#"use crate::entity::{Entities, Parg, Targ};
-use dyer::{ParseResult, Response};
-use dyer::dyer_macros::parser;
+            r#"use crate::entity::*;
+use dyer::*;
 
 /* note that call this function to parse via specifying task.parser:
- *     let task = Task::new();
- *     ...
- *     task.parser = "parse_func".into();
+ *     let task = Task::builder();
+ *         ...
+ *         .parser(parse_func)
+ *         .body(Body::empty(), "actor_marker".into())
+ *         .unwrap();
  * that means function `parse_func` is called to parse the Response.
- * attribute #[parser] mark the method and use it extract entities from `Response` marked with
- * string "parse_func"
+ * attribute #[dyer::parser] mark the method and use it extract entities from `Response` whose
+ * parser is  parse_func
  */
-#[parser]
-pub fn parse_func(_res: Response<Targ, Parg>) -> ParseResult<Entities, Targ, Parg> {
-    ParseResult::new()
+#[dyer::parser]
+pub fn parse_func(_res: Response) -> Parsed<Entities> {
+    Parsed::new()
 }"#
         }
         "pipeline" => {
-            r#"use dyer::dyer_macros::pipeline;
+            r#"use dyer::*;
+use crate::entity::*;
 
  /*
  * something to do before sending entities to pipeline
  * the return type inside `Option` requires complete path(starts with `std` or crate in `Cargo.toml`)
- * attribute #[pipeline(attr)] mark the method and use it as that in `PipeLine` 
+ * attribute #[dyer::pipeline(attr)] mark the method and use it as that in `PipeLine` 
  * attr could be:
- *    open_pipeline/close_pipeline/process_entity/process_yerr
+ *    initializer/disposer/process_entity/process_yerr
  */
-#[pipeline(open_pipeline)]
-async fn func_name<'a>() -> &'a Option<std::fs::File> {
-    &None
+#[dyer::pipeline(initializer)]
+async fn func_name(_app: &mut App<Entities>) -> Option<std::fs::File> 
+{
+    None
 }
 "#
         }
-        "spider" => {
-            r#"pub mod entity;
+        "actor" => {
+            r#"pub mod affix;
+pub mod entity; 
 pub mod middleware;
 pub mod pipeline;
 pub mod parser; 
 
-use entity::{Entities, Parg, Targ};
+use affix::*;
+use entity::*;
 use parser::*;
 use dyer::*;
-use dyer::dyer_macros::spider;
 
-type Stem<U> = Result<U, Box<dyn std::error::Error + Send + Sync>>;
-type Btem<E, T, P> = dyn Fn(Response<T, P>) -> ParseResult<E, T, P>;
-
-// attribute #[spider] mark the struct and use it as a type implemented trait `Spider`
-#[spider]
-pub struct MySpider {
+// attribute #[dyer::actor] mark the struct and use it as a type implemented trait `Actor`
+#[dyer::actor]
+pub struct MyActor {
     pub start_uri: String,
 }
 
-impl Spider<Entities, Targ, Parg> for MySpider {
+#[dyer::async_trait]
+impl Actor<Entities, Aff> for MyActor {
     // create an instance 
-    fn new() -> Self {
-        MySpider{
+    async fn new() -> Self {
+        MyActor{
             start_uri: "https://example.com/some/path/to/site".into()
         }
     }
 
-    // preparation before opening spider
-    fn open_spider(&self, _app: &mut App<Entities, Targ, Parg>) {}
+    // preparation before opening actor
+    async fn open_actor(&self, _app: &mut App<Entities>) {}
 
     /* 
      * `Task` to be executed when starting `dyer`. Note that this function must reproduce a
      * non-empty vector, if not, the whole program will be left at blank.
      */
-    fn entry_task(&self) -> Stem<Vec<Task<Targ>>> {
-        let mut task = Task::new();
-        task.uri = self.start_uri.clone();
+    async fn entry_task(&self) -> Result<Vec<Task>, Box<dyn std::error::Error>> {
+        let task = Task::get( &self.start_uri ) 
+            .parser(parse_func)
+            // here the marker `MyActor` is the same as 
+            // the type implemented trait `Acotr` 
+            // change it if you like as long as it is unique
+            .body(Body::empty(), "MyActor".into())
+            .unwrap();
         Ok(vec![task])
     }
 
-    /* the generator of `Profile`
+    /* the generator of `Affix`
      * `dyer` consume the returned `Request`, generate a `Response` fed to the closure
-     * to generate a `Profile`
+     * to generate a `Affix`
      */
-    fn entry_profile<'a>(&self) -> ProfileInfo<'a, Targ, Parg> {
-        ProfileInfo {
-            req: Some( Request::<Targ, Parg>::new() ),
-            parser: None,
-        }
+    async fn entry_affix(&self) -> Option<Aff> {
+        None
     }
 
-    /* set up parser that extracts `Entities` from the `Response`
-     * by the name of Task.parser return the parser function
-     * parser is indexed by a `String` name, like:
-     * task.parser = "parse_quote".to_string();
-     */
-    fn get_parser<'a>(&self, ind: &str) -> Option<&'a Btem<Entities, Targ, Parg>> {
-        plug!(get_parser(ind; parse_func))
-    }
-
-    // preparation before closing spider
-    fn close_spider(&self, _app: &mut App<Entities, Targ, Parg>) {}
+    // preparation before closing actor
+    async fn close_actor(&self, _app: &mut App<Entities>) {}
 }"#
         }
         "cargo" => {
@@ -222,32 +230,32 @@ edition = "2018"
 
 [lib]
 name = "<+name+>"
-path = "src/spider.rs"
+path = "src/actor.rs"
 
 [[bin]]
 name = "<+name+>"
 path = "src/bin/<+name+>.rs"
 
 [dependencies]
-dyer = { version = "2.0" }
+dyer = { version = "3.0" }
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "0.2", features = ["rt-threaded", "macros"]}
 simple_logger = "1.11" "#
-        },
+        }
         "config" => {
             r#"## ArgApp
-is_skip: true,
+skip: true,
 spawn_task_max: 100,
 buf_task: 10000,
-round_entity: 10,
+round_entity: 50,
 data_dir: data/
 nap: 15.0,
 join_gap: 7.0,
 
-## ArgProfile
-arg_profile.is_on: false,
-arg_profile.profile_min: 0,
-arg_profile.profile_max: 0,
+## ArgAffix
+arg_affix.is_on: false,
+arg_affix.affix_min: 0,
+arg_affix.affix_max: 0,
 
 ## ArgRate
 rate.cycle: 600.0,
@@ -287,19 +295,26 @@ pub(crate) fn run_command(cmd: &str, options: Vec<&str>) {
 }
 
 pub(crate) fn change_log_level(level: &str) {
-    let mut file = std::fs::OpenOptions::new().read(true).open("src/bin/main.rs").unwrap();
+    let mut file = std::fs::OpenOptions::new()
+        .read(true)
+        .open("src/bin/main.rs")
+        .unwrap();
     let mut buf = String::new();
     file.read_to_string(&mut buf).unwrap();
     drop(file);
     let ll = level.strip_prefix("--").unwrap();
-    let l = &( "log::LevelFilter::".to_string() + &to_camelcase(ll) );
+    let l = &("log::LevelFilter::".to_string() + &to_camelcase(ll));
     let buf = buf.replace("log::LevelFilter::Error", l);
     let buf = buf.replace("log::LevelFilter::Warn", l);
     let buf = buf.replace("log::LevelFilter::Info", l);
     let buf = buf.replace("log::LevelFilter::Debug", l);
     let buf = buf.replace("log::LevelFilter::Trace", l);
     let buf = buf.replace("log::LevelFilter::Off", l);
-    let mut file = std::fs::OpenOptions::new().truncate(true).write(true).open("src/bin/main.rs").unwrap();
+    let mut file = std::fs::OpenOptions::new()
+        .truncate(true)
+        .write(true)
+        .open("src/bin/main.rs")
+        .unwrap();
     file.write_all(buf.as_bytes()).unwrap();
 }
 
@@ -312,5 +327,4 @@ pub(crate) fn to_camelcase(s: &str) -> String {
         r.push(t);
     }
     r
-    
 }

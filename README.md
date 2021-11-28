@@ -32,7 +32,7 @@ This command helps you initialize a project with log level `Info`, other log lev
 |___src/
     |___src/entity.rs
     |___src/parser.rs
-    |___src/spider.rs
+    |___src/actor.rs
     |___src/middleware.rs
     |___src/pipeline.rs
 ```

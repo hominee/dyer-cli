@@ -5,7 +5,6 @@ use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::str::FromStr;
 
-// dyer run --info/--debug/warn
 #[derive(std::fmt::Debug)]
 pub struct SubComRun {
     pub options: Vec<String>,
@@ -37,8 +36,9 @@ impl MetaData {
             "middleware",
             "pipeline",
             "parser",
+            "affix",
             "entity",
-            "spider",
+            "actor",
         ];
         let mut h = DefaultHasher::new();
         for path in paths.iter() {
@@ -79,27 +79,38 @@ impl MetaData {
 
     pub(crate) fn init(&mut self) {
         self.get_pkg();
-        let paths = ["middleware", "pipeline", "parser", "entity", "spider"];
-        let raw_pat = r"(?sm)^\s*#\[(?P<module>(middleware)|(pipeline)|(entity)|(spider)|(parser))(\(\s*(?P<key>\w+)\s*\))?\].*?(?P<typ>(fn)|(struct)|(enum))\s*(?P<ident>\w+)((?u-sm).*?\->.*?Option<(?P<ctyp>.*?)>)?";
-        let ctype_pat = r"(?sm)^\s*#\[\s*pipeline\s*\(\s*open_pipeline\s*\)\s*\].*?fn\s*(?P<ident>\w+).*?Option<(?P<ctyp>.*?)>";
+        let paths = [
+            "middleware",
+            "pipeline",
+            "parser",
+            "entity",
+            "affix",
+            "actor",
+        ];
+        let raw_pat = r"(?sm)^\s*#\[(?P<module>((dyer::)?middleware)|((dyer::)?pipeline)|((dyer::)?affix)|((dyer::)?entity)|((dyer::)?actor)|((dyer::)?parser))(\(\s*(?P<key>\w+)\s*\))?\].*?(?P<typ>(fn)|(struct)|(enum))\s*(?P<ident>\w+)((?u-sm).*?\->.*?Option<(?P<ctyp>.*?)>)?";
+        let ctype_pat = r"(?sm)^\s*#\[\s*pipeline\s*\(\s*initializer\s*\)\s*\].*?fn\s*(?P<ident>\w+).*?Option<(?P<ctyp>.*?)>";
 
         for i in 0..paths.len() {
             let pat = regex::Regex::from_str(&raw_pat).unwrap();
             let path = format!("{}src/{}.rs", self.base_dir, paths[i]);
-            let mut file = std::fs::File::open(&path).unwrap();
+            //println!("path: {}", path);
+            let mut file = std::fs::File::open(&path).expect(&format!("path: {} Not Found", path));
             let mut handles = HashMap::new();
             let mut buf = String::new();
             file.read_to_string(&mut buf).unwrap();
             for cap in pat.captures_iter(&buf) {
-                //println!("cap {:?}", cap);
-                let module = cap.name("module").unwrap().as_str();
+                //println!("path: {}, cap {:?}", paths[i], cap);
+                let mut module = cap.name("module").unwrap().as_str();
+                if module.starts_with("dyer") {
+                    module = module.strip_prefix("dyer::").unwrap();
+                }
                 let value = cap.name("ident").unwrap().as_str().to_string();
-                let key = if ["spider", "parser"].contains(&module) {
+                let key = if ["actor", "parser", "affix"].contains(&module) {
                     value.clone()
                 } else {
                     cap.name("key").unwrap().as_str().to_string()
                 };
-                if paths[i] == "pipeline" && &key == "open_pipeline" {
+                if paths[i] == "pipeline" && &key == "initializer" {
                     let ctype = match cap.name("ctyp") {
                         Some(c) => c.as_str().to_string(),
                         None => {
@@ -107,7 +118,7 @@ impl MetaData {
                             if let Some(c) = ctype_pat.captures(&buf) {
                                 c.name("ctyp").unwrap().as_str().to_string()
                             } else {
-                                panic!("failed to extract return type of `open_pipeline`");
+                                panic!("failed to extract return type of `initializer`");
                             }
                         }
                     };
@@ -169,7 +180,7 @@ impl MetaData {
         //println!("packages: {:?}", self.pkgs);
     }
 
-    fn complete_path(&self) -> String {
+    fn complete_path(&self) -> bool {
         let pieces = self
             .ctype
             .split("::")
@@ -177,9 +188,9 @@ impl MetaData {
             .collect::<Vec<&str>>();
         let subpath = pieces[0].to_string();
         if !self.pkgs.contains(&subpath) {
-            panic!("The return type of `open_pipeline` must starts with one of `{}`, not subpath: `{}`", &self.pkgs.join(" "), subpath);
+            return false;
         }
-        "".into()
+        true
     }
 
     pub fn get_pkg_list(&self) -> String {
@@ -195,13 +206,9 @@ impl MetaData {
     pub fn make_main(&self) {
         let entity = self.modules.get("entity").expect("entity cannot be none");
         let entities = entity.handles.get("entities").unwrap();
-        let targ_ = "Targ".to_string();
-        let parg_ = "Parg".to_string();
-        let targ = entity.handles.get("targ").unwrap_or(&targ_);
-        let parg = entity.handles.get("parg").unwrap_or(&parg_);
-        let spider = self
+        let actor = self
             .modules
-            .get("spider")
+            .get("actor")
             .unwrap()
             .handles
             .values()
@@ -210,23 +217,22 @@ impl MetaData {
         let get_pipeline_list = self.modules.get("pipeline").unwrap().get_list();
         let get_pipeline_map = self.modules.get("pipeline").unwrap().get_map();
         let get_middleware_map = self.modules.get("middleware").unwrap().get_map();
-        let ctype = &self.ctype;
-        let ctype_import = self.complete_path();
+        let ctype = if self.complete_path() {
+            &self.ctype
+        } else {
+            "_"
+        };
         let get_pkg_list = self.get_pkg_list();
         let package_name = &self.package_name;
 
-        let main_str = r"//#![allow(unused_imports)]
-
-<+get_pkg_list+>
+        let main_str = r#"<+get_pkg_list+>
 extern crate <+package_name+>; 
 
 use dyer::*;
-use <+package_name+>::entity::{<+entities+>, <+targ+>, <+parg+>};
-use <+package_name+>::<+spider+>;
-use <+package_name+>::middleware::{<+get_middleware_list+>};
-use <+package_name+>::pipeline::{<+get_pipeline_list+>};
-use std::sync::{Arc, Mutex};
-<+ctype_import+>
+use <+package_name+>::entity::*;
+use <+package_name+>::<+actor+>;
+use <+package_name+>::middleware::*;
+use <+package_name+>::pipeline::*;
 
 #[tokio::main]
 async fn main() {
@@ -234,29 +240,31 @@ async fn main() {
         .with_level(log::LevelFilter::Info)
         .init()
         .unwrap();
-    let middleware = plug!( MiddleWare<<+entities+>, <+targ+>, <+parg+>> {
+    let middleware = MiddleWare::<<+entities+>>::builder()
         <+get_middleware_map+>
-    });
-    let pipeline = plug!( PipeLine<<+entities+>, <+ctype+>> {
+        // Identifier of the middleware
+        .build("<+marker+>".into())
+    ;
+    let pipeline = PipeLine::<<+entities+>, <+ctype+>>::builder()
         <+get_pipeline_map+>
-    } );
-    let spider = <+spider+>::new();
-    let mut app = dyer::App::<<+entities+>, <+targ+>, <+parg+>>::new();
-    app.run(&spider, &middleware, pipeline).await.unwrap();
+        // Identifier of the pipeline
+        .build("<+marker+>".into())
+    ;
+    let actor = <+actor+>::new().await;
+    let mut app = dyer::App::<<+entities+>>::new();
+    app.run(&actor, &middleware, &pipeline).await.unwrap();
 }
-        ";
+        "#;
         let main_str = main_str.replace("<+package_name+>", &package_name);
         let main_str = main_str.replace("<+entities+>", &entities);
-        let main_str = main_str.replace("<+targ+>", &targ);
-        let main_str = main_str.replace("<+parg+>", &parg);
-        let main_str = main_str.replace("<+spider+>", &spider);
+        let main_str = main_str.replace("<+actor+>", &actor);
+        let main_str = main_str.replace("<+marker+>", &actor);
         let main_str = main_str.replace("<+get_pkg_list+>", &get_pkg_list);
         let main_str = main_str.replace("<+get_middleware_list+>", &get_middleware_list);
         let main_str = main_str.replace("<+get_middleware_map+>", &get_middleware_map);
         let main_str = main_str.replace("<+get_pipeline_list+>", &get_pipeline_list);
         let main_str = main_str.replace("<+get_pipeline_map+>", &get_pipeline_map);
         let main_str = main_str.replace("<+ctype+>", ctype);
-        let main_str = main_str.replace("<+ctype_import+>", &ctype_import);
         let main_path = format!("{}src/bin/{}.rs", self.base_dir, package_name);
         let mut main_file = std::fs::OpenOptions::new()
             .create(true)
@@ -284,11 +292,25 @@ impl Module {
     }
 
     pub fn get_map(&self) -> String {
-        self.handles
-            .iter()
-            .map(|(key, val)| format!("{}: {}", key, val))
-            .collect::<Vec<String>>()
-            .join(",\n        ")
+        let mut ms = Vec::new();
+        for (key, val) in self.handles.iter() {
+            let output = match key.as_str() {
+                "initializer" => format!(".initializer(&{})", val),
+                "disposer" => format!(".disposer(&{})", val),
+                "process_entity" => format!(".entity(&{})", val),
+                "process_yerr" => format!(".yerr(&{})", val),
+                "handle_task" => format!(".task(&{})", val),
+                "handle_affix" => format!(".affix(&{})", val),
+                "handle_entity" => format!(".entity(&{})", val),
+                "handle_req" => format!(".req(&{})", val),
+                "handle_res" => format!(".res(&{})", val),
+                "handle_err" => format!(".err(&{})", val),
+                "handle_yerr" => format!(".yerr(&{})", val),
+                _ => unreachable!("Invalid, attribute"),
+            };
+            ms.push(output);
+        }
+        ms.join(",\n        ")
     }
 }
 
