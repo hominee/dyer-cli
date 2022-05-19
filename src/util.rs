@@ -190,13 +190,13 @@ impl Actor<Entities, Aff> for MyActor {
     }
 
     // preparation before opening actor
-    async fn open_actor(&self, _app: &mut App<Entities>) {}
+    async fn open_actor(&mut self, _app: &mut App<Entities>) {}
 
     /* 
      * `Task` to be executed when starting `dyer`. Note that this function must reproduce a
      * non-empty vector, if not, the whole program will be left at blank.
      */
-    async fn entry_task(&self) -> Result<Vec<Task>, Box<dyn std::error::Error>> {
+    async fn entry_task(&mut self) -> Result<Vec<Task>, Box<dyn std::error::Error>> {
         let task = Task::get( &self.start_uri ) 
             .parser(parse_func)
             // here the marker `MyActor` is the same as 
@@ -211,12 +211,12 @@ impl Actor<Entities, Aff> for MyActor {
      * `dyer` consume the returned `Request`, generate a `Response` fed to the closure
      * to generate a `Affix`
      */
-    async fn entry_affix(&self) -> Option<Aff> {
+    async fn entry_affix(&mut self) -> Option<Aff> {
         None
     }
 
     // preparation before closing actor
-    async fn close_actor(&self, _app: &mut App<Entities>) {}
+    async fn close_actor(&mut self, _app: &mut App<Entities>) {}
 }"#
         }
         "cargo" => {

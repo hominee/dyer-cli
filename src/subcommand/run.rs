@@ -250,9 +250,9 @@ async fn main() {
         // Identifier of the pipeline
         .build("<+marker+>".into())
     ;
-    let actor = <+actor+>::new().await;
+    let mut actor = <+actor+>::new().await;
     let mut app = dyer::App::<<+entities+>>::new();
-    app.run(&actor, &middleware, &pipeline).await.unwrap();
+    app.run(&mut actor, &middleware, &pipeline).await.unwrap();
 }
         "#;
         let main_str = main_str.replace("<+package_name+>", &package_name);
