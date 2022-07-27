@@ -17,7 +17,7 @@ path = "src/main.rs"
 [package]
 edition = "2018"
 name = "dyer-cli"
-version = "0.4.0"
+version = "0.6.0"
 authors = ["HomelyGuy"]
 description = "dyer-cli is a great tool created to guide you use dyer fast and at ease, helps you build a robust crawler, data processor, netwrok program fast and correctly."
 homepage = "https://crates.io/crates/dyer-cli"

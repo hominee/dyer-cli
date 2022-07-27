@@ -133,7 +133,7 @@ use dyer::*;
  *     let task = Task::builder();
  *         ...
  *         .parser(parse_func)
- *         .body(Body::empty(), "actor_marker".into())
+ *         .body(Body::empty(), "actor_marker")
  *         .unwrap();
  * that means function `parse_func` is called to parse the Response.
  * attribute #[dyer::parser] mark the method and use it extract entities from `Response` whose
@@ -202,7 +202,7 @@ impl Actor<Entities, Aff> for MyActor {
             // here the marker `MyActor` is the same as 
             // the type implemented trait `Acotr` 
             // change it if you like as long as it is unique
-            .body(Body::empty(), "MyActor".into())
+            .body(Body::empty(), "MyActor")
             .unwrap();
         Ok(vec![task])
     }
@@ -237,9 +237,9 @@ name = "<+name+>"
 path = "src/bin/<+name+>.rs"
 
 [dependencies]
-dyer = { version = "3.0" }
+dyer = { version = "3.3", features = [] }
 serde = { version = "1.0", features = ["derive"] }
-tokio = { version = "0.2", features = ["rt-threaded", "macros"]}
+tokio = { version = "1.20", features = ["rt-multi-thread"]}
 simple_logger = "1.11" "#
         }
         "config" => {

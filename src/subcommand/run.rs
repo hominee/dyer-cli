@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::util;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
@@ -243,12 +244,12 @@ async fn main() {
     let middleware = MiddleWare::<<+entities+>>::builder()
         <+get_middleware_map+>
         // Identifier of the middleware
-        .build("<+marker+>".into())
+        .build("<+marker+>")
     ;
     let pipeline = PipeLine::<<+entities+>, <+ctype+>>::builder()
         <+get_pipeline_map+>
         // Identifier of the pipeline
-        .build("<+marker+>".into())
+        .build("<+marker+>")
     ;
     let mut actor = <+actor+>::new().await;
     let mut app = dyer::App::<<+entities+>>::new();
